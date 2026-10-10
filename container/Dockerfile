@@ -1,26 +1,52 @@
 FROM ubuntu:22.04
 
+ENV TZ=Asia/Hong_Kong
+
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y install \
   bash-completion \
   build-essential \
   curl \
   dbus-x11 \
+  dconf-cli \
   fonts-noto \
+  fonts-noto-cjk \
   git \
+  ibus-libpinyin \
   ibus-mozc \
+  ibus-rime \
+  language-pack-en \
   language-pack-ja-base \
   language-pack-ja \
+  language-pack-zh-hans \
+  language-pack-zh-hant \
   less \
+  locales \
   nano \
   net-tools \
   openssh-server \
+  rime-data-luna-pinyin \
   sudo \
-  supervisor\ 
+  supervisor \
+  tzdata \
   ubuntu-gnome-desktop \
   vim \
   xrdp \
+  && locale-gen en_US.UTF-8 zh_CN.UTF-8 zh_TW.UTF-8 ja_JP.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en \
+  && ln -snf /usr/share/zoneinfo/Asia/Hong_Kong /etc/localtime \
+  && echo Asia/Hong_Kong > /etc/timezone \
   && apt clean && rm -rf /var/lib/apt/lists/*
 
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en
+
+COPY dconf/00-input-sources /etc/dconf/db/local.d/00-input-sources
+RUN mkdir -p /etc/dconf/profile \
+  && if [ ! -e /etc/dconf/profile/user ]; then printf 'user-db:user\n' > /etc/dconf/profile/user; fi \
+  && if ! grep -qx 'system-db:local' /etc/dconf/profile/user; then sed -i '/^user-db:/a system-db:local' /etc/dconf/profile/user; fi \
+  && dconf update
+
+COPY rime/default.custom.yaml /etc/skel/.config/ibus/rime/default.custom.yaml
+COPY rime/default.custom.yaml /root/.config/ibus/rime/default.custom.yaml
 
 # sshd
 RUN mkdir -p /var/run/sshd \

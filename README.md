@@ -2,6 +2,11 @@
 
 Yet another Ubuntu 22.04 GNOME desktop on docker with xrdp and sshd.
 
+The default language is English (United States), and the time zone is Hong Kong
+(`Asia/Hong_Kong`). New desktop users have US English, Japanese (Mozc),
+Simplified Chinese (Intelligent Pinyin), and Traditional Chinese (Rime Luna
+Pinyin Taiwan) input sources available from the GNOME input menu.
+
 ```
 docker-compose pull
 docker-compose up

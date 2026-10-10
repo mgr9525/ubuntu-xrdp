@@ -1,3 +1,3 @@
-export LANG="ja_JP.UTF-8"
-export LANGUAGE="ja_JP:ja"
-export TZ="Asia/Tokyo"
+export LANG="en_US.UTF-8"
+export LANGUAGE="en_US:en"
+export TZ="Asia/Hong_Kong"
