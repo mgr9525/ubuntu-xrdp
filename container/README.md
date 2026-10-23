@@ -52,15 +52,54 @@ usermod -aG sudo alice  # 仅在需要 sudo 时执行
 某个用户时，应把用户创建步骤加入自定义 Dockerfile 或入口脚本，并在运行时单独设置
 密码；不要把真实密码写入镜像层。
 
-入口脚本会自动创建示例用户 `ubuntu`，其默认密码也是 `ubuntu`。容器暴露到不受信任
-的网络前，请立即修改这两个密码。修改当前容器中的密码：
+### 登录安全与密码
+
+root 的 SSH 登录（包括密码和密钥）以及 RDP 登录均已禁用，root 密码在构建时和每次
+容器启动时都会锁定。日常使用 `ubuntu` 登录，需要管理权限时执行 `sudo`，输入的是
+`ubuntu` 自己的密码。宿主机仍可通过 `docker compose exec --user root application bash`
+执行容器管理操作。
+
+入口脚本仍会自动创建示例用户 `ubuntu`，其默认密码也是 `ubuntu`。请先在宿主机或云
+防火墙限制 `10022`、`13389` 端口的访问，仅允许可信管理地址；启动后从宿主机设置强密码，
+再开放所需访问。不要直接将默认密码的容器暴露到公网：
 
 ```bash
 docker compose exec application passwd ubuntu
-docker compose exec application passwd root
 ```
 
-重新构建镜像时，还应同步修改 [Dockerfile](Dockerfile) 中的示例密码。
+`restart` 不会覆盖已修改的 ubuntu 密码；删除并重建容器后，密码会恢复为 `ubuntu`，
+必须重新设置。不要将真实密码写进 Dockerfile 或镜像层，也无需为 root 设置登录密码。
+
+修改本仓库文件不会自动更新已运行的容器；需要重新构建镜像并创建新容器。部署前先备份
+所需数据，保持上述端口访问限制，再执行：
+
+```bash
+docker compose build
+docker compose up -d --force-recreate application
+docker compose exec application passwd ubuntu
+```
+
+可从宿主机检查新容器的登录限制：
+
+```bash
+docker compose exec application /usr/sbin/sshd -t
+docker compose exec application /usr/sbin/sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+docker compose exec application passwd -S root
+docker compose exec application sed -n '/^\[Security\]/,/^\[/p' /etc/xrdp/sesman.ini
+```
+
+预期 SSH 输出 `permitrootlogin no`、`passwordauthentication yes`，root 密码状态为 `L`，
+sesman 的 `[Security]` 段包含 `AllowRootLogin=false`。
+
+### 已被入侵的容器
+
+禁用 root 登录不会清除已经植入的挖矿程序或后门。先通过宿主机或云网络隔离受影响容器，
+保留登录日志和必要证据，再停止受影响容器，从可信源码和镜像重新构建。仅恢复经过检查
+的必要数据，不要直接复用受感染容器的文件系统或可疑启动脚本。
+
+在干净环境轮换容器中保存或使用过的密码、SSH 私钥和 Token，并检查持久化任务、
+`authorized_keys` 及宿主机是否受到影响。当前 Compose 授予容器 `SYS_ADMIN` 能力，
+不要直接假定入侵影响仅限容器。此修复不调整该权限，以维持现有 Chrome 运行条件。
 
 ## 更新 Google Chrome 安装包
 

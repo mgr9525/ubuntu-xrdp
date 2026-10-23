@@ -50,9 +50,13 @@ COPY rime/default.custom.yaml /root/.config/ibus/rime/default.custom.yaml
 
 # sshd
 RUN mkdir -p /var/run/sshd \
-  && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config \
-  && echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config \
-  && echo root:mypassword | chpasswd
+  # Put these before Include directives: sshd uses the first value it reads.
+  && sed -i -E '/^[[:space:]]*(PermitRootLogin|PasswordAuthentication)[[:space:]]/Id' /etc/ssh/sshd_config \
+  && sed -i '1iPermitRootLogin no\nPasswordAuthentication yes' /etc/ssh/sshd_config \
+  && passwd -l root \
+  && /usr/sbin/sshd -t \
+  && /usr/sbin/sshd -T | grep -qx 'permitrootlogin no' \
+  && /usr/sbin/sshd -T | grep -qx 'passwordauthentication yes'
 
 
 # xrdp
@@ -60,7 +64,9 @@ RUN mkdir -p /var/run/dbus \
   && adduser xrdp ssl-cert \
   && apt -y remove gnome-initial-setup \
   && sed -i -E 's/^rdpdr=true/rdpdr=false/g' /etc/xrdp/xrdp.ini \
-  && sed -i -E 's/^cliprdr=true/cliprdr=false/g' /etc/xrdp/xrdp.ini
+  && sed -i -E 's/^cliprdr=true/cliprdr=false/g' /etc/xrdp/xrdp.ini \
+  && sed -i -E '/^[[:space:]]*\[Security\][[:space:]]*$/,/^[[:space:]]*\[[^]]+\][[:space:]]*$/ s/^[[:space:]]*AllowRootLogin[[:space:]]*=.*/AllowRootLogin=false/' /etc/xrdp/sesman.ini \
+  && awk '/^[[:space:]]*\[/ { security = ($0 ~ /^[[:space:]]*\[Security\][[:space:]]*$/) } security && /^[[:space:]]*AllowRootLogin[[:space:]]*=/ { found = 1; if ($0 !~ /^AllowRootLogin=false$/) invalid = 1 } END { exit (!found || invalid) }' /etc/xrdp/sesman.ini
 
 COPY xrdp/*.sh /etc/xrdp/
 RUN chmod +x /etc/xrdp/*.sh

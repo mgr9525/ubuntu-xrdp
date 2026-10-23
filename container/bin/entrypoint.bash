@@ -3,6 +3,8 @@ set -eu
 set -o pipefail
 
 function main() {
+  # Keep root password authentication locked across container restarts.
+  passwd -l root
   set-skel-files
   add-sample-user
   run-supervisor

@@ -12,7 +12,7 @@
 ## 修改镜像
 
 - 在 `container/Dockerfile` 中维护软件包安装及镜像配置；在 `container/bin/` 中维护进程启动逻辑；在 `container/supervisor/` 中维护 Supervisor 配置。
-- Dockerfile 使用硬编码密码启用 root SSH 登录，入口脚本也为示例账户设置了硬编码密码。修改端口暴露方式或文档时，应将这些设置视为仅供开发使用的默认值。
+- root 的 SSH 和 RDP 登录必须保持禁用，root 密码在构建时和每次容器启动时锁定。日常使用 `ubuntu`，管理操作通过 sudo 或宿主机 Docker 执行。入口脚本仍为示例账户设置 `ubuntu/ubuntu` 默认凭据；重建容器后必须在开放公网访问前重新设置强密码，不要把真实密码写入镜像层。
 - 修改桌面会话启动流程时，同时检查 `container/xrdp/startwm.sh` 和 `entrypoint.bash` 写入 `/etc/skel/.xsessionrc` 的环境变量。
 - GNOME 输入源默认值位于 `container/dconf/00-input-sources`；简体使用 IBus Libpinyin，繁体使用 Rime 的 `luna_pinyin_tw` 方案，其配置位于 `container/rime/default.custom.yaml`。修改输入法时，同步检查 Dockerfile 中的软件包和语言环境。
 - GitHub Actions 工作流在推送到 `main` 时发布镜像。修改镜像标签或构建上下文时，同步更新 Compose 配置和文档。
